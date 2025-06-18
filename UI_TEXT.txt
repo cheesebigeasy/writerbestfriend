@@ -1,0 +1,109 @@
+# Writer's Best Friend - UI Text Content
+
+## SECTION HEADERS
+Profile Management
+Load XML Files
+XML Structure
+Define New Update Rule
+Edit Update Rule
+Current Update Rules
+Loaded Files
+File Preview
+Processing & Results
+
+## BUTTON LABELS
+Save Profile
+Load Profile
+Select XML File(s)
+Select Folder
+Add Rule
+Update Rule
+Cancel
+Edit
+Delete
+Apply Rules to All Files
+Download Processed
+Original
+Modified
+
+## FORM LABELS
+Profile Name (optional)
+Target Tag Name or Path
+Condition Logic
+Condition Value
+Condition Value (Regex)
+Action Logic
+Search Regex (for replacement)
+New Content Value
+Replacement Value (can use $1, $2 etc.)
+
+## PLACEHOLDER TEXT
+My XML Rules
+e.g., 'title', 'data*', or 'task/equipment/status'
+Enter Regex pattern
+Enter text value
+Regex to find text, e.g., 'old_text(\\d+)'
+Enter new content
+e.g., 'new_text$1'
+
+## STATUS MESSAGES
+Profile loaded successfully with X rules
+Processing...
+Viewing: filename.xml
+
+## ERROR MESSAGES
+No rules to save. Please create some rules first.
+Invalid profile format.
+Error loading profile: 
+Target tag is required.
+Condition value is required for the selected logic.
+Invalid Regex pattern for condition.
+Search Regex is required for this action.
+Invalid Regex pattern for search.
+Please load XML files and define at least one update rule.
+File has not been processed or processing resulted in an error.
+No files were successfully processed to download.
+Some XML files could not be read. Please check console for errors.
+No XML files found in selection.
+
+## HELP TEXT
+Save your rules as a profile to reuse later. Load previously saved profiles to apply to new XML files.
+You can select multiple XML files or a folder containing XML files. Non-XML files will be ignored.
+Load XML files to see their structure.
+Click any path to use it as your target tag. XPath-like targeting supported.
+Use simple tags ('status'), wildcards ('data*'), or paths ('task/equipment/status'). Click any item in the XML Structure tree to auto-fill.
+Use '*' as a wildcard. E.g., 'ns:*' or 'item*'. Case-insensitive matching for wildcards.
+For Regex replacement, capture groups like $1, $2 can be used in the 'Replacement Value'.
+Examples: "task" (all task tags), "task/equipment" (equipment within task), "*/status" (status in any parent)
+No update rules defined yet. Add rules using the form to get started.
+No XML files loaded. Use the controls above to select files or a folder.
+Select a file from the list to preview its content.
+No changes applied to this file based on current rules.
+
+## DROPDOWN OPTIONS
+Always Apply
+Content Equals
+Content Contains
+Content Matches Regex (on tag's text content)
+Replace Entire Content with Text
+Regex Replace in Content
+Remove Tag
+
+## FILE STATUS INDICATORS
+pending
+processing  
+processed
+error
+
+## TREE VIEW TEXT
+Selected path: X - Click "Add Rule" to use this target.
+Rule #X: Target <tagname>
+Rule #X: Target path "path/to/tag"
+Condition: 
+Action:
+
+## INFORMATIONAL TEXT
+Click any path in XML Structure tree to auto-fill target
+XPath-like targeting supported
+Case-insensitive matching for wildcards
+(X) - for file/rule counts
