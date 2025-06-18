@@ -183,3 +183,164 @@ SUPPORTED FORMATS
 - Technical documentation XML
 - Configuration files
 - Any well-formed XML structure
+
+
+Create a complete single-page HTML application called "Writer's Best Friend" with the following specifications:
+
+### **Core Functionality:**
+Build an XML file processing tool that allows users to:
+1. Load multiple XML files or entire folders containing XML files
+2. Define custom rules to modify XML content based on conditions
+3. Apply these rules to process the XML files
+4. Preview original vs modified content side-by-side
+5. Download the processed files
+6. Save/load rule profiles for reuse
+
+### **Technical Requirements:**
+- Single HTML file with embedded CSS and JavaScript
+- Use React (via CDN) with Babel for JSX transformation
+- Modern, clean UI with Microsoft Fluent Design inspired styling
+- Responsive design that works on mobile and desktop
+- Local storage for auto-saving rules between sessions
+
+### **User Interface Sections:**
+
+**1. Profile Management**
+- Allow users to save current rules as named profiles (JSON download)
+- Load previously saved profiles from JSON files
+- Auto-save rules to localStorage
+
+**2. File Loading**
+- File selector for individual XML files (multiple selection)
+- Folder selector to load all XML files from a directory
+- File list with status indicators (pending, processing, processed, error)
+- File preview pane showing original and modified content
+
+**3. Rule Editor**
+- Target tag field with auto-suggestions from discovered XML tags
+- Condition logic dropdown with options:
+  * Always Apply
+  * Content Equals
+  * Content Contains  
+  * Content Matches Regex
+- Action logic dropdown with options:
+  * Replace Entire Content with Text
+  * Regex Replace in Content
+  * Remove Tag
+- Validation for regex patterns
+- Support for wildcard tag matching (*, ?)
+
+**4. Rule Management**
+- List all current rules with edit/delete options
+- Show rule summaries with truncated values
+- Rule validation and error messaging
+
+**5. Processing & Download**
+- Batch process all files with current rules
+- Progress indicators during processing
+- Download individual files or all files as ZIP
+- Error handling for invalid XML
+
+### **Key Features to Implement:**
+
+**XML Processing Logic:**
+- Parse XML using DOMParser
+- Support wildcard tag matching with regex conversion
+- Apply multiple rules in sequence
+- Handle regex capture groups ($1, $2, etc.)
+- Preserve XML structure and formatting
+- Error handling for malformed XML
+
+**Tag Discovery:**
+- Automatically extract all unique XML tag names from loaded files
+- Provide autocomplete suggestions when typing tag names
+- Sort tags alphabetically for easy browsing
+
+**File Management:**
+- Track file status (pending/processing/processed/error)
+- Generate unique IDs for each file
+- Support drag-and-drop functionality
+- Filter out non-XML files automatically
+
+**Data Persistence:**
+- Auto-save rules to localStorage on every change
+- Load saved rules on application startup
+- Profile export/import as JSON files
+
+### **Styling Guidelines:**
+- Use Segoe UI font family
+- Clean, modern interface with subtle shadows and borders
+- Color scheme: blues for primary actions, red for danger actions
+- Responsive grid layouts
+- Consistent spacing and typography
+- Visual status indicators with colored dots
+- Hover effects and focus states
+
+### **Error Handling:**
+- Validate regex patterns in real-time
+- Show helpful error messages for invalid XML
+- Handle file reading errors gracefully
+- Prevent processing without files or rules
+
+### **Code Organization:**
+- Separate utility functions for XML processing
+- Modular React components for each UI section
+- Clean state management with hooks
+- Proper event handling and validation
+
+Create a single-page HTML application for processing XML files. Requirements:
+
+TECHNICAL STACK:
+- Single HTML file with embedded CSS and JavaScript
+- Use React via CDN (18.x) with Babel for JSX
+- Modern, clean UI similar to Microsoft Office applications
+- No external dependencies beyond React/Babel CDNs
+
+CORE FEATURES:
+1. Load multiple XML files from user's computer
+2. Create rules to modify XML content (find/replace, remove tags, etc.)
+3. Apply rules to all loaded files
+4. Preview original vs modified content
+5. Download processed files
+
+
+Create a single-page HTML application for processing XML files. Requirements:
+
+TECHNICAL STACK:
+- Single HTML file with embedded CSS and JavaScript
+- Use React via CDN (18.x) with Babel for JSX
+- Modern, clean UI similar to Microsoft Office applications
+- No external dependencies beyond React/Babel CDNs
+
+CORE FEATURES:
+1. Load multiple XML files from user's computer
+2. Create rules to modify XML content (find/replace, remove tags, etc.)
+3. Apply rules to all loaded files
+4. Preview original vs modified content
+5. Download processed files
+
+UI SECTIONS:
+- File loader with drag/drop support
+- Rule editor with form fields
+- File list with status indicators  
+- Preview pane showing before/after content
+- Process and download buttons
+
+Start with the basic HTML structure, CSS styling, and file loading functionality. Use a clean, professional design with blue accent colors.
+'
+
+"Now add XML parsing functionality that can extract all unique tag names from loaded files"
+
+"Add a rule editor that allows targeting specific XML tags with conditions like 'content contains' or 'content matches regex'"
+
+"Implement the XML processing engine that applies rules to modify file content"
+
+"Add profile save/load functionality using JSON files and localStorage"
+UI SECTIONS:
+- File loader with drag/drop support
+- Rule editor with form fields
+- File list with status indicators  
+- Preview pane showing before/after content
+- Process and download buttons
+
+Start with the basic HTML structure, CSS styling, and file loading functionality. Use a clean, professional design with blue accent colors.
