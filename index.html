@@ -86,6 +86,8 @@
             padding: 20px;
             border-radius: 4px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-x: auto;
+            box-sizing: border-box;
         }
         
         .section {
@@ -94,6 +96,10 @@
             padding: 15px;
             background-color: #fafafa;
             border-radius: 3px;
+        }
+        
+        .section.collapsed {
+            padding-bottom: 5px;
         }
         
         .error {
@@ -151,10 +157,14 @@
             padding: 12px;
             background-color: white;
             overflow: auto;
+            overflow-x: auto;
             max-height: 400px;
             font-size: 12px;
             font-family: 'Consolas', 'Courier New', monospace;
             border-radius: 2px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            word-break: break-all;
         }
         
         h1 {
@@ -176,6 +186,14 @@
             font-size: 16px;
             font-weight: 600;
             margin: 0 0 8px 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        h3:hover {
+            color: #0078d4;
         }
         
         label {
@@ -244,17 +262,20 @@
             border: 1px solid #e0e0e0;
             border-radius: 2px;
             padding: 10px;
-            max-height: 300px;
+            max-height: 400px;
             overflow-y: auto;
+            overflow-x: auto;
             font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 12px;
+            font-size: 13px;
+            word-wrap: break-word;
         }
         
         .tree-node {
-            margin: 2px 0;
+            margin: 3px 0;
             cursor: pointer;
-            padding: 2px 4px;
+            padding: 4px 6px;
             border-radius: 2px;
+            line-height: 1.4;
         }
         
         .tree-node:hover {
@@ -266,20 +287,47 @@
             border: 1px solid #0078d4;
         }
         
-        .tree-indent {
+        .tree-expand {
             display: inline-block;
             width: 16px;
+            cursor: pointer;
+            color: #666;
+            font-weight: bold;
+            margin-right: 4px;
+        }
+        
+        .tree-indent {
+            display: inline-block;
+            width: 20px;
         }
         
         .tree-tag {
             color: #0078d4;
+            font-weight: 600;
+        }
+        
+        .tree-attribute {
+            color: #008000;
+            font-size: 12px;
+        }
+        
+        .tree-text {
+            color: #666;
+            font-size: 12px;
+            font-style: italic;
+        }
+        
+        .tree-entity {
+            color: #8B4513;
             font-weight: 500;
         }
         
         .tree-path {
-            color: #666;
+            color: #999;
             font-size: 11px;
             margin-left: 8px;
+            word-wrap: break-word;
+            word-break: break-all;
         }
         
         .targeting-mode {
@@ -288,6 +336,35 @@
             padding: 8px;
             border-radius: 3px;
             margin: 8px 0;
+        }
+        
+        .attribute-editor {
+            background-color: #f8f8f8;
+            border: 1px solid #e0e0e0;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        
+        .collapse-icon {
+            font-size: 12px;
+            transition: transform 0.2s;
+        }
+        
+        .collapse-icon.collapsed {
+            transform: rotate(90deg);
+        }
+        
+        /* Additional overflow and text wrapping styles */
+        .tree-node, .tree-tag, .tree-attribute, .tree-text {
+            word-wrap: break-word;
+            word-break: break-all;
+            max-width: 100%;
+        }
+        
+        textarea, input[type="text"] {
+            word-wrap: break-word;
+            resize: vertical;
         }
         
         @media (max-width: 768px) {
@@ -324,7 +401,9 @@
                 copyProcessed: "Copy Processed",
                 copyFile: "Copy",
                 original: "Original",
-                modified: "Modified"
+                modified: "Modified",
+                collapse: "v",
+                expand: ">"
             },
             headers: {
                 profileManagement: "Profile Management",
@@ -340,6 +419,8 @@
             labels: {
                 profileName: "Profile Name (optional)",
                 targetTag: "Target Tag Name or Path",
+                targetType: "Target Type",
+                attributeName: "Attribute Name",
                 conditionLogic: "Condition Logic",
                 conditionValue: "Condition Value",
                 conditionValueRegex: "Condition Value (Regex)",
@@ -351,6 +432,7 @@
             placeholders: {
                 profileName: "My XML Rules",
                 targetTag: "e.g., 'title', 'data*', or 'task/equipment/status'",
+                attributeName: "e.g., 'id', 'class', 'type'",
                 regexPattern: "Enter Regex pattern",
                 textValue: "Enter text value",
                 searchRegex: "Regex to find text, e.g., 'old_text(\\d+)'",
@@ -382,44 +464,88 @@
             ALWAYS_APPLY: "Always Apply",
             CONTENT_EQUALS: "Content Equals",
             CONTENT_CONTAINS: "Content Contains",
-            CONTENT_MATCHES_REGEX: "Content Matches Regex (on tag's text content)",
+            CONTENT_MATCHES_REGEX: "Content Matches Regex",
+            ATTRIBUTE_EQUALS: "Attribute Equals",
+            ATTRIBUTE_CONTAINS: "Attribute Contains",
+            ATTRIBUTE_EXISTS: "Attribute Exists"
         };
 
         const ActionLogic = {
             REPLACE_ENTIRE_CONTENT: "Replace Entire Content with Text",
             REGEX_REPLACE_IN_CONTENT: "Regex Replace in Content",
             REMOVE_TAG: "Remove Tag",
+            SET_ATTRIBUTE: "Set Attribute Value",
+            REMOVE_ATTRIBUTE: "Remove Attribute",
+            REPLACE_ENTITY: "Replace Entity"
         };
 
-        // Enhanced XML Structure Analysis
+        const TargetType = {
+            TAG: "Tag/Element",
+            ATTRIBUTE: "Attribute",
+            ENTITY: "Entity/Declaration"
+        };
+
+        // Enhanced XML Structure Analysis with attributes and entities
         const analyzeXmlStructure = (xmlString) => {
             const structure = [];
             const tagPaths = new Set();
+            const entities = new Set();
             
             try {
+                // Extract entities and declarations first
+                const entityMatches = xmlString.match(/<!(?:ENTITY|DOCTYPE|ELEMENT|ATTLIST)[^>]*>/g) || [];
+                entityMatches.forEach(entity => {
+                    entities.add(entity);
+                    structure.push({
+                        type: 'entity',
+                        tag: entity,
+                        path: entity,
+                        depth: 0,
+                        hasChildren: false,
+                        textContent: '',
+                        attributes: {}
+                    });
+                });
+
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(xmlString, "application/xml");
                 
                 const parsingError = doc.getElementsByTagName("parsererror");
                 if (parsingError.length > 0) {
-                    return { structure: [], tagPaths: [] };
+                    return { structure, tagPaths: [], entities: Array.from(entities) };
                 }
 
-                const buildPath = (element, path = []) => {
+                const buildPath = (element, path = [], parentExpanded = true) => {
                     const currentPath = [...path, element.tagName];
                     const pathString = currentPath.join('/');
                     tagPaths.add(pathString);
                     
+                    // Get attributes
+                    const attributes = {};
+                    for (let i = 0; i < element.attributes.length; i++) {
+                        const attr = element.attributes[i];
+                        attributes[attr.name] = attr.value;
+                    }
+
+                    // Add attribute paths
+                    Object.keys(attributes).forEach(attrName => {
+                        tagPaths.add(`${pathString}@${attrName}`);
+                    });
+                    
                     structure.push({
+                        type: 'element',
                         tag: element.tagName,
                         path: pathString,
                         depth: currentPath.length - 1,
                         hasChildren: element.children.length > 0,
-                        textContent: element.children.length === 0 ? (element.textContent || '').trim() : ''
+                        textContent: element.children.length === 0 ? (element.textContent || '').trim() : '',
+                        attributes: attributes,
+                        expanded: parentExpanded
                     });
 
+                    // Process all children
                     Array.from(element.children).forEach(child => {
-                        buildPath(child, currentPath);
+                        buildPath(child, currentPath, parentExpanded);
                     });
                 };
 
@@ -432,15 +558,28 @@
             
             return { 
                 structure, 
-                tagPaths: Array.from(tagPaths).sort() 
+                tagPaths: Array.from(tagPaths).sort(),
+                entities: Array.from(entities)
             };
         };
 
-        // Enhanced XML Processing with XPath-like targeting
+        // Enhanced XML Processing with attributes and entities
         const applyRulesToXmlWithPath = (xmlString, rules) => {
             try {
+                // Handle entity rules first
+                let processedXml = xmlString;
+                
+                rules.forEach(rule => {
+                    if (rule.targetType === TargetType.ENTITY) {
+                        if (rule.actionLogic === ActionLogic.REPLACE_ENTITY) {
+                            const entityRegex = new RegExp(escapeRegExp(rule.targetTag), 'g');
+                            processedXml = processedXml.replace(entityRegex, rule.actionValue);
+                        }
+                    }
+                });
+
                 const parser = new DOMParser();
-                const doc = parser.parseFromString(xmlString, "application/xml");
+                const doc = parser.parseFromString(processedXml, "application/xml");
                 const serializer = new XMLSerializer();
 
                 const parsingError = doc.getElementsByTagName("parsererror");
@@ -453,87 +592,132 @@
                 let modified = false;
 
                 rules.forEach(rule => {
+                    if (rule.targetType === TargetType.ENTITY) return; // Already handled above
+                    
                     const elementsToProcess = [];
                     
-                    if (rule.targetTag.includes('/')) {
-                        const pathParts = rule.targetTag.split('/');
-                        let currentElements = [doc.documentElement];
-                        
-                        pathParts.forEach(part => {
-                            const nextElements = [];
-                            currentElements.forEach(element => {
-                                if (part.includes('*') || part.includes('?')) {
-                                    const regexPattern = part
-                                        .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-                                        .replace(/\*/g, '.*')
-                                        .replace(/\?/g, '.');
-                                    const tagRegex = new RegExp(`^${regexPattern}$`, 'i');
-                                    
-                                    Array.from(element.children).forEach(child => {
-                                        if (tagRegex.test(child.tagName)) {
-                                            nextElements.push(child);
-                                        }
-                                    });
-                                } else {
-                                    Array.from(element.children).forEach(child => {
-                                        if (child.tagName === part) {
-                                            nextElements.push(child);
-                                        }
-                                    });
-                                }
-                            });
-                            currentElements = nextElements;
-                        });
-                        
-                        elementsToProcess.push(...currentElements);
-                    } 
-                    else if (rule.targetTag.includes('*') || rule.targetTag.includes('?')) {
-                        const regexPattern = rule.targetTag
-                            .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-                            .replace(/\*/g, '.*')
-                            .replace(/\?/g, '.');
-                        const tagRegex = new RegExp(`^${regexPattern}$`, 'i');
-                        
-                        const allElements = doc.getElementsByTagName('*');
-                        for (let i = 0; i < allElements.length; i++) {
-                            if (tagRegex.test(allElements[i].tagName)) {
-                                elementsToProcess.push(allElements[i]);
+                    // Handle attribute targeting
+                    if (rule.targetType === TargetType.ATTRIBUTE) {
+                        const [elementPath, attributeName] = rule.targetTag.split('@');
+                        const elements = findElementsByPath(doc, elementPath);
+                        elements.forEach(element => {
+                            if (element.hasAttribute(attributeName)) {
+                                elementsToProcess.push({ element, attributeName });
                             }
-                        }
-                    } 
-                    else {
-                        const foundElements = doc.getElementsByTagName(rule.targetTag);
-                        for (let i = 0; i < foundElements.length; i++) {
-                            elementsToProcess.push(foundElements[i]);
+                        });
+                    } else {
+                        // Handle element targeting (existing logic)
+                        if (rule.targetTag.includes('/')) {
+                            const pathParts = rule.targetTag.split('/');
+                            let currentElements = [doc.documentElement];
+                            
+                            pathParts.forEach(part => {
+                                const nextElements = [];
+                                currentElements.forEach(element => {
+                                    if (part.includes('*') || part.includes('?')) {
+                                        const regexPattern = part
+                                            .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+                                            .replace(/\*/g, '.*')
+                                            .replace(/\?/g, '.');
+                                        const tagRegex = new RegExp(`^${regexPattern}$`, 'i');
+                                        
+                                        Array.from(element.children).forEach(child => {
+                                            if (tagRegex.test(child.tagName)) {
+                                                nextElements.push(child);
+                                            }
+                                        });
+                                    } else {
+                                        Array.from(element.children).forEach(child => {
+                                            if (child.tagName === part) {
+                                                nextElements.push(child);
+                                            }
+                                        });
+                                    }
+                                });
+                                currentElements = nextElements;
+                            });
+                            
+                            elementsToProcess.push(...currentElements.map(el => ({ element: el })));
+                        } 
+                        else if (rule.targetTag.includes('*') || rule.targetTag.includes('?')) {
+                            const regexPattern = rule.targetTag
+                                .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+                                .replace(/\*/g, '.*')
+                                .replace(/\?/g, '.');
+                            const tagRegex = new RegExp(`^${regexPattern}$`, 'i');
+                            
+                            const allElements = doc.getElementsByTagName('*');
+                            for (let i = 0; i < allElements.length; i++) {
+                                if (tagRegex.test(allElements[i].tagName)) {
+                                    elementsToProcess.push({ element: allElements[i] });
+                                }
+                            }
+                        } 
+                        else {
+                            const foundElements = doc.getElementsByTagName(rule.targetTag);
+                            for (let i = 0; i < foundElements.length; i++) {
+                                elementsToProcess.push({ element: foundElements[i] });
+                            }
                         }
                     }
 
-                    elementsToProcess.forEach(element => {
+                    elementsToProcess.forEach(({ element, attributeName }) => {
                         let conditionMet = false;
-                        const currentContent = element.textContent || "";
-
-                        switch (rule.conditionLogic) {
-                            case ConditionLogic.ALWAYS_APPLY:
-                                conditionMet = true;
-                                break;
-                            case ConditionLogic.CONTENT_EQUALS:
-                                conditionMet = currentContent === rule.conditionValue;
-                                break;
-                            case ConditionLogic.CONTENT_CONTAINS:
-                                conditionMet = currentContent.includes(rule.conditionValue);
-                                break;
-                            case ConditionLogic.CONTENT_MATCHES_REGEX:
-                                try {
-                                    const regex = new RegExp(rule.conditionValue);
-                                    conditionMet = regex.test(currentContent);
-                                } catch (e) {
-                                    console.error("Invalid regex in condition: ", rule.conditionValue, e);
-                                }
-                                break;
+                        
+                        // Check conditions based on type
+                        if (rule.targetType === TargetType.ATTRIBUTE && attributeName) {
+                            const attributeValue = element.getAttribute(attributeName) || "";
+                            
+                            switch (rule.conditionLogic) {
+                                case ConditionLogic.ALWAYS_APPLY:
+                                    conditionMet = true;
+                                    break;
+                                case ConditionLogic.ATTRIBUTE_EQUALS:
+                                    conditionMet = attributeValue === rule.conditionValue;
+                                    break;
+                                case ConditionLogic.ATTRIBUTE_CONTAINS:
+                                    conditionMet = attributeValue.includes(rule.conditionValue);
+                                    break;
+                                case ConditionLogic.ATTRIBUTE_EXISTS:
+                                    conditionMet = element.hasAttribute(attributeName);
+                                    break;
+                                case ConditionLogic.CONTENT_MATCHES_REGEX:
+                                    try {
+                                        const regex = new RegExp(rule.conditionValue);
+                                        conditionMet = regex.test(attributeValue);
+                                    } catch (e) {
+                                        console.error("Invalid regex in condition: ", rule.conditionValue, e);
+                                    }
+                                    break;
+                            }
+                        } else {
+                            // Element content conditions
+                            const currentContent = element.textContent || "";
+                            
+                            switch (rule.conditionLogic) {
+                                case ConditionLogic.ALWAYS_APPLY:
+                                    conditionMet = true;
+                                    break;
+                                case ConditionLogic.CONTENT_EQUALS:
+                                    conditionMet = currentContent === rule.conditionValue;
+                                    break;
+                                case ConditionLogic.CONTENT_CONTAINS:
+                                    conditionMet = currentContent.includes(rule.conditionValue);
+                                    break;
+                                case ConditionLogic.CONTENT_MATCHES_REGEX:
+                                    try {
+                                        const regex = new RegExp(rule.conditionValue);
+                                        conditionMet = regex.test(currentContent);
+                                    } catch (e) {
+                                        console.error("Invalid regex in condition: ", rule.conditionValue, e);
+                                    }
+                                    break;
+                            }
                         }
 
                         if (conditionMet) {
                             modified = true;
+                            
                             switch (rule.actionLogic) {
                                 case ActionLogic.REPLACE_ENTIRE_CONTENT:
                                     element.textContent = rule.actionValue;
@@ -542,7 +726,7 @@
                                     if (rule.actionSearchRegex) {
                                         try {
                                             const findRegex = new RegExp(rule.actionSearchRegex, 'g');
-                                            element.textContent = currentContent.replace(findRegex, rule.actionValue);
+                                            element.textContent = element.textContent.replace(findRegex, rule.actionValue);
                                         } catch (e) {
                                             console.error("Invalid regex for search/replace: ", rule.actionSearchRegex, e);
                                         }
@@ -550,6 +734,16 @@
                                     break;
                                 case ActionLogic.REMOVE_TAG:
                                     element.parentNode?.removeChild(element);
+                                    break;
+                                case ActionLogic.SET_ATTRIBUTE:
+                                    if (attributeName) {
+                                        element.setAttribute(attributeName, rule.actionValue);
+                                    }
+                                    break;
+                                case ActionLogic.REMOVE_ATTRIBUTE:
+                                    if (attributeName) {
+                                        element.removeAttribute(attributeName);
+                                    }
                                     break;
                             }
                         }
@@ -564,13 +758,40 @@
             }
         };
 
+        // Helper function to escape regex special characters
+        const escapeRegExp = (string) => {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        };
+
+        // Helper function to find elements by path
+        const findElementsByPath = (doc, path) => {
+            if (!path || path === '') return [doc.documentElement];
+            
+            const pathParts = path.split('/');
+            let currentElements = [doc.documentElement];
+            
+            pathParts.forEach(part => {
+                const nextElements = [];
+                currentElements.forEach(element => {
+                    Array.from(element.children).forEach(child => {
+                        if (child.tagName === part) {
+                            nextElements.push(child);
+                        }
+                    });
+                });
+                currentElements = nextElements;
+            });
+            
+            return currentElements;
+        };
+
         // Profile Management Functions
         const saveProfile = (rules, profileName) => {
             const profile = {
                 name: profileName || `Profile_${new Date().toISOString().split('T')[0]}`,
                 rules: rules,
                 created: new Date().toISOString(),
-                version: "1.0"
+                version: "2.0"
             };
             
             const blob = new Blob([JSON.stringify(profile, null, 2)], { type: 'application/json' });
@@ -621,45 +842,247 @@
         };
 
         // Components
+        const RegexCheatSheet = () => {
+            const [isExpanded, setIsExpanded] = useState(false);
+
+            const regexPatterns = [
+                { pattern: '.', description: 'Any single character' },
+                { pattern: '*', description: 'Zero or more of the preceding character' },
+                { pattern: '+', description: 'One or more of the preceding character' },
+                { pattern: '?', description: 'Zero or one of the preceding character' },
+                { pattern: '^', description: 'Start of string' },
+                { pattern: '$', description: 'End of string' },
+                { pattern: '\\d', description: 'Any digit (0-9)' },
+                { pattern: '\\w', description: 'Any word character (a-z, A-Z, 0-9, _)' },
+                { pattern: '\\s', description: 'Any whitespace character' },
+                { pattern: '[abc]', description: 'Any character in the set (a, b, or c)' },
+                { pattern: '[a-z]', description: 'Any lowercase letter' },
+                { pattern: '[0-9]', description: 'Any digit' },
+                { pattern: '(abc)', description: 'Capture group - use $1, $2, etc. in replacement' },
+                { pattern: '|', description: 'OR operator (abc|def matches abc or def)' },
+                { pattern: '\\', description: 'Escape special characters (\\. for literal dot)' }
+            ];
+
+            return (
+                <div style={{
+                    margin: '15px 0',
+                    border: '1px solid #d0d0d0',
+                    borderRadius: '3px',
+                    backgroundColor: '#f9f9f9'
+                }}>
+                    <h4 
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        style={{
+                            margin: '0',
+                            padding: '10px 15px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: '#323130',
+                            borderBottom: isExpanded ? '1px solid #d0d0d0' : 'none'
+                        }}
+                    >
+                        <span style={{
+                            transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.2s'
+                        }}>></span>
+                        Regex Quick Reference
+                    </h4>
+                    
+                    {isExpanded && (
+                        <div style={{ padding: '15px' }}>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'auto 1fr',
+                                gap: '8px 15px',
+                                fontSize: '13px',
+                                fontFamily: 'Consolas, Courier New, monospace'
+                            }}>
+                                {regexPatterns.map((item, index) => (
+                                    <React.Fragment key={index}>
+                                        <code style={{
+                                            backgroundColor: '#e8e8e8',
+                                            padding: '2px 6px',
+                                            borderRadius: '2px',
+                                            fontWeight: 'bold'
+                                        }}>
+                                            {item.pattern}
+                                        </code>
+                                        <span style={{ color: '#333' }}>{item.description}</span>
+                                    </React.Fragment>
+                                ))}
+                            </div>
+                            
+                            <div style={{
+                                marginTop: '12px',
+                                padding: '8px',
+                                backgroundColor: '#fff3cd',
+                                border: '1px solid #ffeaa7',
+                                borderRadius: '2px',
+                                fontSize: '12px'
+                            }}>
+                                <strong>Examples:</strong><br/>
+                                <code>\\d+</code> - One or more digits<br/>
+                                <code>^[A-Z]</code> - Starts with uppercase letter<br/>
+                                <code>(\\w+)-(\\d+)</code> - Captures word-dash-number (use $1-$2 in replacement)
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
         const XmlStructureViewer = ({ files, onPathSelect, selectedPath }) => {
             const [xmlStructure, setXmlStructure] = useState([]);
             const [tagPaths, setTagPaths] = useState([]);
+            const [entities, setEntities] = useState([]);
+            const [expandedNodes, setExpandedNodes] = useState(new Set());
+            const [isCollapsed, setIsCollapsed] = useState(false);
             
             useEffect(() => {
                 if (files.length > 0) {
-                    const { structure, tagPaths: paths } = analyzeXmlStructure(files[0].originalContent);
+                    const { structure, tagPaths: paths, entities: entityList } = analyzeXmlStructure(files[0].originalContent);
                     setXmlStructure(structure);
                     setTagPaths(paths);
+                    setEntities(entityList);
+                    
+                    // Auto-expand first 3 levels for better visibility
+                    const autoExpand = new Set();
+                    structure.forEach(node => {
+                        if (node.depth <= 2) {
+                            autoExpand.add(node.path);
+                        }
+                    });
+                    setExpandedNodes(autoExpand);
                 }
             }, [files]);
+
+            const toggleNode = (path) => {
+                const newExpanded = new Set(expandedNodes);
+                if (newExpanded.has(path)) {
+                    newExpanded.delete(path);
+                } else {
+                    newExpanded.add(path);
+                }
+                setExpandedNodes(newExpanded);
+            };
+
+            const renderNode = (node, index) => {
+                const isExpanded = expandedNodes.has(node.path);
+                const hasChildren = node.hasChildren;
+                
+                if (node.type === 'entity') {
+                    return (
+                        <div
+                            key={index}
+                            className={`tree-node ${selectedPath === node.path ? 'selected' : ''}`}
+                            onClick={() => onPathSelect(node.path)}
+                        >
+                            <span className="tree-entity">📄 {node.tag}</span>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div key={index}>
+                        <div
+                            className={`tree-node ${selectedPath === node.path ? 'selected' : ''}`}
+                            onClick={() => onPathSelect(node.path)}
+                        >
+                            <span className="tree-indent" style={{width: `${node.depth * 20}px`}}></span>
+                            {hasChildren && (
+                                <span 
+                                    className="tree-expand"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleNode(node.path);
+                                    }}
+                                >
+                                    {isExpanded ? 'v' : '>'}
+                                </span>
+                            )}
+                            {!hasChildren && <span className="tree-expand"> </span>}
+                            <span className="tree-tag">&lt;{node.tag}&gt;</span>
+                            
+                            {Object.keys(node.attributes).length > 0 && (
+                                <span className="tree-attribute">
+                                    {' '}
+                                    {Object.entries(node.attributes).map(([name, value]) => (
+                                        <span key={name} onClick={(e) => {
+                                            e.stopPropagation();
+                                            onPathSelect(`${node.path}@${name}`);
+                                        }}>
+                                            {name}="{value.length > 20 ? value.substring(0,20)+'...' : value}" 
+                                        </span>
+                                    ))}
+                                </span>
+                            )}
+                            
+                            {node.textContent && (
+                                <span className="tree-text">
+                                    {' "' + (node.textContent.length > 30 ? node.textContent.substring(0,30)+'...' : node.textContent) + '"'}
+                                </span>
+                            )}
+                            
+                            <span className="tree-path">{node.path}</span>
+                        </div>
+                        
+                        {/* Render attribute nodes */}
+                        {isExpanded && Object.keys(node.attributes).map(attrName => (
+                            <div
+                                key={`${node.path}@${attrName}`}
+                                className={`tree-node ${selectedPath === `${node.path}@${attrName}` ? 'selected' : ''}`}
+                                onClick={() => onPathSelect(`${node.path}@${attrName}`)}
+                            >
+                                <span className="tree-indent" style={{width: `${(node.depth + 1) * 20}px`}}></span>
+                                <span className="tree-expand"> </span>
+                                <span className="tree-attribute">@{attrName}: "{node.attributes[attrName]}"</span>
+                            </div>
+                        ))}
+                    </div>
+                );
+            };
 
             if (files.length === 0) {
                 return (
                     <div className="section">
-                        <h3>{UI_TEXT.headers.xmlStructure}</h3>
+                        <h3 onClick={() => setIsCollapsed(!isCollapsed)}>
+                            <span className={`collapse-icon ${isCollapsed ? 'collapsed' : ''}`}>v</span>
+                            {UI_TEXT.headers.xmlStructure}
+                        </h3>
                     </div>
                 );
             }
 
             return (
-                <div className="section">
-                    <h3>{UI_TEXT.headers.xmlStructure}</h3>
-                    <div className="xml-tree">
-                        {xmlStructure.map((node, index) => (
-                            <div
-                                key={index}
-                                className={`tree-node ${selectedPath === node.path ? 'selected' : ''}`}
-                                onClick={() => onPathSelect(node.path)}
-                            >
-                                <span className="tree-indent" style={{width: `${node.depth * 16}px`}}></span>
-                                <span className="tree-tag">&lt;{node.tag}&gt;</span>
-                                {node.textContent && (
-                                    <span style={{color: '#666', fontSize: '11px'}}> "{node.textContent.substring(0, 30)}{node.textContent.length > 30 ? '...' : ''}"</span>
-                                )}
-                                <span className="tree-path">{node.path}</span>
-                            </div>
-                        ))}
-                    </div>
+                <div className={`section ${isCollapsed ? 'collapsed' : ''}`}>
+                    <h3 onClick={() => setIsCollapsed(!isCollapsed)}>
+                        <span className={`collapse-icon ${isCollapsed ? 'collapsed' : ''}`}>v</span>
+                        {UI_TEXT.headers.xmlStructure}
+                    </h3>
+                    
+                    {!isCollapsed && (
+                        <div className="xml-tree">
+                            {entities.map((entity, index) => renderNode({
+                                type: 'entity',
+                                tag: entity,
+                                path: entity,
+                                depth: 0,
+                                hasChildren: false
+                            }, `entity-${index}`))}
+                            
+                            {xmlStructure.filter(node => node.type === 'element').map((node, index) => {
+                                // Only render if parent is expanded or this is a top-level node
+                                const parentPath = node.path.split('/').slice(0, -1).join('/');
+                                const shouldRender = node.depth === 0 || expandedNodes.has(parentPath);
+                                
+                                return shouldRender ? renderNode(node, index) : null;
+                            })}
+                        </div>
+                    )}
                 </div>
             );
         };
@@ -863,7 +1286,9 @@
         const RuleEditor = ({ onAddRule, existingRule, onUpdateRule, onCancelEdit, discoveredTags, tagPaths, selectedPath, onPathSelect }) => {
             const initialRuleState = {
                 targetTag: '',
-                conditionLogic: ConditionLogic.ALWAYS_APPLY,
+                targetType: TargetType.ATTRIBUTE,
+                attributeName: '',
+                conditionLogic: ConditionLogic.ATTRIBUTE_CONTAINS,
                 conditionValue: '',
                 actionLogic: ActionLogic.REPLACE_ENTIRE_CONTENT,
                 actionValue: '',
@@ -876,6 +1301,7 @@
 
             const conditionLogicOptions = Object.values(ConditionLogic).map(val => ({ value: val, label: val }));
             const actionLogicOptions = Object.values(ActionLogic).map(val => ({ value: val, label: val }));
+            const targetTypeOptions = Object.values(TargetType).map(val => ({ value: val, label: val }));
 
             useEffect(() => {
                 if (existingRule) {
@@ -889,7 +1315,19 @@
 
             useEffect(() => {
                 if (selectedPath) {
-                    handleInputChange('targetTag', selectedPath);
+                    if (selectedPath.includes('@')) {
+                        const [path, attr] = selectedPath.split('@');
+                        handleInputChange('targetTag', path);
+                        handleInputChange('attributeName', attr);
+                        handleInputChange('targetType', TargetType.ATTRIBUTE);
+                    } else if (selectedPath.startsWith('<!')) {
+                        handleInputChange('targetTag', selectedPath);
+                        handleInputChange('targetType', TargetType.ENTITY);
+                    } else {
+                        handleInputChange('targetTag', selectedPath);
+                        handleInputChange('targetType', TargetType.ATTRIBUTE);
+                        handleInputChange('conditionLogic', ConditionLogic.ATTRIBUTE_CONTAINS);
+                    }
                     onPathSelect(null);
                 }
             }, [selectedPath]);
@@ -898,9 +1336,16 @@
                 const newErrors = {};
                 if (!rule.targetTag.trim()) newErrors.targetTag = "Target tag is required.";
                 
-                if (rule.conditionLogic !== ConditionLogic.ALWAYS_APPLY && !rule.conditionValue.trim()) {
+                if (rule.targetType === TargetType.ATTRIBUTE && !rule.attributeName.trim()) {
+                    newErrors.attributeName = "Attribute name is required.";
+                }
+                
+                if (rule.conditionLogic !== ConditionLogic.ALWAYS_APPLY && 
+                    rule.conditionLogic !== ConditionLogic.ATTRIBUTE_EXISTS && 
+                    !rule.conditionValue.trim()) {
                     newErrors.conditionValue = "Condition value is required for the selected logic.";
                 }
+                
                 if (rule.conditionLogic === ConditionLogic.CONTENT_MATCHES_REGEX && rule.conditionValue) {
                     try { new RegExp(rule.conditionValue); } 
                     catch (e) { newErrors.conditionValue = "Invalid Regex pattern for condition."; }
@@ -940,7 +1385,18 @@
             };
 
             const handleTagSelect = (tag) => {
-                handleInputChange('targetTag', tag);
+                if (tag.includes('@')) {
+                    const [path, attr] = tag.split('@');
+                    handleInputChange('targetTag', path);
+                    handleInputChange('attributeName', attr);
+                    handleInputChange('targetType', TargetType.ATTRIBUTE);
+                } else if (tag.startsWith('<!')) {
+                    handleInputChange('targetTag', tag);
+                    handleInputChange('targetType', TargetType.ENTITY);
+                } else {
+                    handleInputChange('targetTag', tag);
+                    handleInputChange('targetType', TargetType.TAG);
+                }
                 setShowTagSuggestions(false);
             };
 
@@ -957,7 +1413,22 @@
                     )}
                     
                     <div className="form-group">
-                        <label htmlFor="targetTag">{UI_TEXT.labels.targetTag}</label>
+                        <label htmlFor="targetType">{UI_TEXT.labels.targetType}</label>
+                        <select
+                            id="targetType"
+                            value={rule.targetType}
+                            onChange={(e) => handleInputChange('targetType', e.target.value)}
+                        >
+                            {targetTypeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                        </select>
+                    </div>
+                    
+                    <div className="form-group">
+                        <label htmlFor="targetTag">
+                            {rule.targetType === TargetType.ENTITY ? 'Entity/Declaration' : 
+                             rule.targetType === TargetType.ATTRIBUTE ? 'Element Path' : 
+                             UI_TEXT.labels.targetTag}
+                        </label>
                         <input
                             type="text"
                             id="targetTag"
@@ -965,7 +1436,10 @@
                             onChange={(e) => handleInputChange('targetTag', e.target.value)}
                             onFocus={() => setShowTagSuggestions(true)}
                             onBlur={() => setTimeout(() => setShowTagSuggestions(false), 200)}
-                            placeholder={UI_TEXT.placeholders.targetTag}
+                            placeholder={
+                                rule.targetType === TargetType.ENTITY ? "e.g., '<!DOCTYPE html>', '<!ENTITY name \"value\">' " :
+                                UI_TEXT.placeholders.targetTag
+                            }
                         />
                         <TagSuggestions 
                             tags={allSuggestions} 
@@ -975,6 +1449,20 @@
                         {errors.targetTag && <div className="error">{errors.targetTag}</div>}
                     </div>
 
+                    {rule.targetType === TargetType.ATTRIBUTE && (
+                        <div className="form-group">
+                            <label htmlFor="attributeName">{UI_TEXT.labels.attributeName}</label>
+                            <input
+                                type="text"
+                                id="attributeName"
+                                value={rule.attributeName}
+                                onChange={(e) => handleInputChange('attributeName', e.target.value)}
+                                placeholder={UI_TEXT.placeholders.attributeName}
+                            />
+                            {errors.attributeName && <div className="error">{errors.attributeName}</div>}
+                        </div>
+                    )}
+
                     <div className="two-column">
                         <div className="form-group">
                             <label htmlFor="conditionLogic">{UI_TEXT.labels.conditionLogic}</label>
@@ -983,10 +1471,21 @@
                                 value={rule.conditionLogic}
                                 onChange={(e) => handleInputChange('conditionLogic', e.target.value)}
                             >
-                                {conditionLogicOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                {conditionLogicOptions.map(opt => {
+                                    // Filter options based on target type
+                                    if (rule.targetType === TargetType.ATTRIBUTE) {
+                                        if (opt.value.startsWith('CONTENT_')) return null;
+                                    } else if (rule.targetType === TargetType.ENTITY) {
+                                        if (opt.value.startsWith('ATTRIBUTE_')) return null;
+                                    } else {
+                                        if (opt.value.startsWith('ATTRIBUTE_')) return null;
+                                    }
+                                    return <option key={opt.value} value={opt.value}>{opt.label}</option>;
+                                })}
                             </select>
                         </div>
-                        {rule.conditionLogic !== ConditionLogic.ALWAYS_APPLY && (
+                        {rule.conditionLogic !== ConditionLogic.ALWAYS_APPLY && 
+                         rule.conditionLogic !== ConditionLogic.ATTRIBUTE_EXISTS && (
                             <div className="form-group">
                                 <label htmlFor="conditionValue">
                                     {UI_TEXT.labels.conditionValue} {rule.conditionLogic === ConditionLogic.CONTENT_MATCHES_REGEX && "(Regex)"}
@@ -1018,7 +1517,21 @@
                                 }
                             }}
                         >
-                            {actionLogicOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            {actionLogicOptions.map(opt => {
+                                // Filter options based on target type
+                                if (rule.targetType === TargetType.ATTRIBUTE) {
+                                    if (opt.value === ActionLogic.REPLACE_ENTIRE_CONTENT || 
+                                        opt.value === ActionLogic.REGEX_REPLACE_IN_CONTENT ||
+                                        opt.value === ActionLogic.REMOVE_TAG) return null;
+                                } else if (rule.targetType === TargetType.ENTITY) {
+                                    if (opt.value !== ActionLogic.REPLACE_ENTITY) return null;
+                                } else {
+                                    if (opt.value === ActionLogic.SET_ATTRIBUTE || 
+                                        opt.value === ActionLogic.REMOVE_ATTRIBUTE ||
+                                        opt.value === ActionLogic.REPLACE_ENTITY) return null;
+                                }
+                                return <option key={opt.value} value={opt.value}>{opt.label}</option>;
+                            })}
                         </select>
                     </div>
 
@@ -1036,22 +1549,31 @@
                         </div>
                     )}
 
-                    {rule.actionLogic !== ActionLogic.REMOVE_TAG && (
+                    {rule.actionLogic !== ActionLogic.REMOVE_TAG && 
+                     rule.actionLogic !== ActionLogic.REMOVE_ATTRIBUTE && (
                         <div className="form-group">
                             <label htmlFor="actionValue">
-                                {rule.actionLogic === ActionLogic.REGEX_REPLACE_IN_CONTENT ? UI_TEXT.labels.replacementValue : UI_TEXT.labels.newContent}
+                                {rule.actionLogic === ActionLogic.REGEX_REPLACE_IN_CONTENT ? UI_TEXT.labels.replacementValue : 
+                                 rule.actionLogic === ActionLogic.SET_ATTRIBUTE ? "Attribute Value" :
+                                 rule.actionLogic === ActionLogic.REPLACE_ENTITY ? "New Entity/Declaration" :
+                                 UI_TEXT.labels.newContent}
                             </label>
                             <textarea
                                 id="actionValue"
                                 value={rule.actionValue}
                                 onChange={(e) => handleInputChange('actionValue', e.target.value)}
-                                rows={3}
+                                rows={rule.targetType === TargetType.ENTITY ? 4 : 3}
                                 placeholder={
-                                    rule.actionLogic === ActionLogic.REGEX_REPLACE_IN_CONTENT ? UI_TEXT.placeholders.replacementValue : UI_TEXT.placeholders.newContent
+                                    rule.actionLogic === ActionLogic.REGEX_REPLACE_IN_CONTENT ? UI_TEXT.placeholders.replacementValue : 
+                                    rule.actionLogic === ActionLogic.REPLACE_ENTITY ? "e.g., '<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\">' " :
+                                    UI_TEXT.placeholders.newContent
                                 }
                             />
                         </div>
                     )}
+
+                    {/* Regex Cheat Sheet */}
+                    <RegexCheatSheet />
 
                     <div style={{marginTop: '15px', display: 'flex', gap: '8px'}}>
                         {existingRule && onCancelEdit && (
@@ -1090,16 +1612,20 @@
                                     <div className="bullet selected"></div>
                                     <div style={{flex: 1}}>
                                         <div style={{fontWeight: '600', marginBottom: '6px'}}>
-                                            Rule #{index + 1}: Target {rule.targetTag.includes('/') ? `path "${rule.targetTag}"` : `<${rule.targetTag}>`}
+                                            Rule #{index + 1}: {rule.targetType === TargetType.ENTITY ? 'Entity' : 
+                                                              rule.targetType === TargetType.ATTRIBUTE ? `Attribute @${rule.attributeName}` : 'Element'} 
+                                            {rule.targetType === TargetType.ATTRIBUTE ? ` in ${rule.targetTag}` :
+                                             rule.targetType === TargetType.ENTITY ? ` ${rule.targetTag.substring(0,30)}...` :
+                                             rule.targetTag.includes('/') ? ` path "${rule.targetTag}"` : ` <${rule.targetTag}>`}
                                         </div>
                                         <div style={{fontSize: '12px', marginBottom: '4px', color: '#666'}}>
                                             <strong>Condition:</strong> {rule.conditionLogic} 
-                                            {rule.conditionLogic !== 'Always Apply' && rule.conditionValue && 
+                                            {rule.conditionLogic !== 'Always Apply' && rule.conditionLogic !== 'Attribute Exists' && rule.conditionValue && 
                                                 <span> "{rule.conditionValue.length > 30 ? rule.conditionValue.substring(0,27)+'...' : rule.conditionValue}"</span>}
                                         </div>
                                         <div style={{fontSize: '12px', color: '#666'}}>
                                             <strong>Action:</strong> {rule.actionLogic}
-                                            {rule.actionLogic !== 'Remove Tag' && 
+                                            {rule.actionLogic !== 'Remove Tag' && rule.actionLogic !== 'Remove Attribute' && 
                                                 <span> "{rule.actionValue.length > 30 ? rule.actionValue.substring(0,27)+'...' : rule.actionValue}"</span>}
                                             {rule.actionLogic === 'Regex Replace in Content' && rule.actionSearchRegex && 
                                                 <span> (Find: "{rule.actionSearchRegex.length > 20 ? rule.actionSearchRegex.substring(0,17)+'...' : rule.actionSearchRegex}")</span>}
@@ -1248,7 +1774,11 @@
                     
                     uniqueNewFiles.forEach(file => {
                         const { structure, tagPaths: paths } = analyzeXmlStructure(file.originalContent);
-                        structure.forEach(node => newTags.add(node.tag));
+                        structure.forEach(node => {
+                            if (node.type === 'element') {
+                                newTags.add(node.tag);
+                            }
+                        });
                         paths.forEach(path => newPaths.add(path));
                     });
                     
